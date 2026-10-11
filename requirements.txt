@@ -1,0 +1,9 @@
+# Core data processing and training; tests use standard-library unittest.
+numpy==2.2.6
+scipy==1.16.0
+pandas==2.2.3
+matplotlib==3.10.3
+scikit-learn==1.6.1
+joblib==1.5.1
+streamlit==1.45.1
+plotly==6.1.2

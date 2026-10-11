@@ -1,0 +1,61 @@
+# Local Python environments and installation/build products
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Test, type-checker, formatter, notebook and coverage caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+.ipynb_checkpoints/
+
+# Local machine/editor files and secrets
+.DS_Store
+.env
+.env.*
+.idea/
+.vscode/
+
+# Original NASA data and downloaded archives: do not commit source datasets
+*.mat
+*.zip
+*.7z
+*.tar
+*.tar.gz
+/data/raw/**
+!/data/raw/README.md
+
+# Reproducibly generated cycle tables; keep only the directory placeholder
+/data/processed/**
+!/data/processed/.gitkeep
+
+# Fitted final models, weights, preprocessors and generated schema metadata
+/models/**
+!/models/.gitkeep
+*.joblib
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.onnx
+*.keras
+*.parquet
+*.npy
+*.npz
+
+# Generated figures and experiment/report outputs can be regenerated locally
+/reports/figures/**
+!/reports/figures/.gitkeep
+/reports/results/**
+!/reports/results/.gitkeep
+/reports/inspection*.json
+*.log

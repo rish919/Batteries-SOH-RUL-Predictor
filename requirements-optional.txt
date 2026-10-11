@@ -1,0 +1,5 @@
+# Optional experiment/explanation libraries; core pipeline records skips if absent.
+-c requirements.txt
+xgboost==3.0.2
+torch==2.7.1
+shap==0.48.0
