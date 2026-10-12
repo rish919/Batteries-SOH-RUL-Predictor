@@ -38,7 +38,7 @@ git ls-files 'data/raw/**/*.mat'
 
 ---
 
-## 🚀 Getting Started (Step-by-Step Guide)
+## Getting Started (Step-by-Step Guide)
 
 Tested with Python 3.13.5, NumPy 2.2.6, SciPy 1.16.0, pandas 2.2.3, scikit-learn 1.6.1, Streamlit 1.45.1, and Plotly 6.1.2. Optional libraries include XGBoost 3.0.2, PyTorch 2.7.1, and SHAP 0.48.0.
 
