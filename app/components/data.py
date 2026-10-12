@@ -19,7 +19,7 @@ def csv_file(path: str, mtime: float) -> pd.DataFrame:
 def json_file(path: str, mtime: float) -> dict:
     return json.loads(Path(path).read_text())
 
-def cached_csv(path: Path):
+def cached_csv(path: Path) -> pd.DataFrame | None:
     return csv_file(str(path),path.stat().st_mtime) if path.is_file() else None
 
 def cached_json(path: Path):

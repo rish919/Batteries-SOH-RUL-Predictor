@@ -1,5 +1,6 @@
 """Local interactive dashboard for actual NASA battery experiment artifacts."""
 from pathlib import Path
+import json
 import sys
 import numpy as np
 import pandas as pd
@@ -28,7 +29,7 @@ h1,h2,h3{letter-spacing:-.025em}
 config=ProjectConfig(); P=config.paths; ready,missing=readiness(config)
 
 @st.cache_data(show_spinner=False)
-def load_data():
+def load_data() -> dict[str, pd.DataFrame | None]:
     return {name:cached_csv(path) for name,path in {
       'cycles':P.processed/'cycle_features.csv','soh':P.processed/'soh_dataset.csv','rul':P.processed/'rul_dataset.csv',
       'ops':P.processed/'operation_inventory.csv','impedance':P.processed/'impedance_records.csv',
@@ -38,7 +39,7 @@ def load_data():
 
 data=load_data(); quality=cached_json(P.results/'data_quality_report.json') or {}; comparison=cached_json(P.results/'model_comparison.json') or {}
 
-st.sidebar.markdown('## 🔋 Battery Lab')
+st.sidebar.markdown('## ML Based SOH-RUL predictor in Li-ion batteries of EVs')
 st.sidebar.caption('NASA Ames PCoE • SOH & RUL')
 section=st.sidebar.radio('Navigation',['Project Overview','Battery Data Explorer','Model Performance','Prediction Explorer','Feature Importance','Methodology & Limitations'])
 st.sidebar.divider();st.sidebar.caption('Laboratory aging benchmark. Results do not establish EV fleet performance.')
@@ -152,11 +153,11 @@ elif section=='Prediction Explorer':
                 elif 'temperature' in col: units[col]='°C'
             st.caption(f'Features are reordered to the saved schema: {", ".join(features)}. Supply these units: '+', '.join(f'{c}={units.get(c,"unitless")}' for c in features)+f'. Output: {"percentage points" if target_up=="soh" else "cycles"}. Missing numeric values use training-fitted median imputation.')
             acknowledged=st.checkbox('I confirm the uploaded feature values use the displayed units and represent measurements available at the prediction cycle.',key='units_ack')
-            if X.isna().all(axis=1).any(): st.warning(f'{int(X.isna().all(axis=1).sum())} row(s) have all features missing; a numerical output would not be informative. Remove or repair these rows.')
+            if X.isna().all(axis=1).any(): st.warning(f'{X.isna().all(axis=1).sum()} row(s) have all features missing; a numerical output would not be informative. Remove or repair these rows.')
             model_path=P.models/f'{target_up}_{model_up}.joblib'
             if not meta_path.is_file(): st.error(f'Final model/schema is unavailable: {meta_path}')
             elif model_up!='lstm' and not model_path.is_file(): st.error(f'Final model is unavailable: {model_path}')
-            elif st.button('Generate demonstration predictions',disabled=not acknowledged or X.isna().all(axis=1).any()):
+            elif st.button('Generate demonstration predictions',disabled=bool(not acknowledged or X.isna().all(axis=1).any())):
                 result=frame.copy()
                 if model_up=='lstm':
                     import torch,joblib
@@ -171,7 +172,7 @@ elif section=='Prediction Explorer':
                             with torch.no_grad(): raw=net(seq).numpy()
                             values=prep['target_scaler'].inverse_transform(raw.reshape(-1,1)).ravel()
                             result[f'{target_up}_prediction']=np.nan
-                            result.loc[ends,f'{target_up}_prediction']=values
+                            result.loc[list(ends),f'{target_up}_prediction']=values
                         else: st.warning('No contiguous five-cycle sequences were found; no predictions generated.')
                 else:
                     estimator=final_model(str(model_path),model_path.stat().st_mtime);result[f'{target_up}_prediction']=estimator.predict(X[features])

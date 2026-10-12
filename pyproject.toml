@@ -18,3 +18,9 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pyrefly]
+search-path = ["app", "src"]
+
+[tool.mypy]
+ignore_missing_imports = true

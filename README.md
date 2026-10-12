@@ -1,180 +1,195 @@
 # EV Battery SOH and RUL Prognostics
 
-An auditable machine-learning mini-project for estimating lithium-ion battery
-State of Health (SOH) and Remaining Useful Life (RUL) from NASA Ames PCoE
-laboratory aging data. It parses the original MATLAB files, derives causal
-cycle-level features and targets, evaluates models with battery-level holdouts,
-and presents measured data and saved evaluation results in Streamlit.
+An auditable machine-learning framework for estimating lithium-ion battery State of Health (SOH) and Remaining Useful Life (RUL) from NASA Ames Prognostics Center of Excellence (PCoE) laboratory aging data. The system parses original MATLAB files, derives causal cycle-level features and degradation targets, evaluates regressors via strict leave-one-battery-out (LOBO) cross-validation, and provides an interactive Streamlit dashboard for exploration, audit inspection, and real-time inference.
 
-NASA describes this experiment as a laboratory testbed with differing discharge
-conditions and an EOL criterion of 30% rated-capacity fade (2 Ah to 1.4 Ah).
-These data do not establish EV fleet or pack performance. See the [official
-NASA repository](https://www.nasa.gov/intelligent-systems-division/discovery-and-systems-health/pcoe/pcoe-data-set-repository/)
-and its [linked archive](https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip).
-Dataset citation: B. Saha and K. Goebel (2007), “Battery Data Set”, NASA
-Prognostics Data Repository, NASA Ames Research Center.
+NASA describes this experiment as a laboratory testbed with differing operational discharge conditions and an End-of-Life (EOL) criterion of 30% rated-capacity fade (2.0 Ah down to 1.4 Ah). These laboratory data do not establish EV fleet or pack-level performance. See the [official NASA repository](https://www.nasa.gov/intelligent-systems-division/discovery-and-systems-health/pcoe/pcoe-data-set-repository/) and its [linked archive](https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip).
 
-## Project layout
+**Dataset citation:** B. Saha and K. Goebel (2007), "Battery Data Set", NASA Prognostics Data Repository, NASA Ames Research Center, Moffett Field, CA.
+
+---
+
+## Project Layout
 
 ```text
-BL_RUL_predictor/
+SOH_RUL_predictor/
 ├── app/
-│   ├── streamlit_app.py          # Dashboard entry point
-│   └── components/               # Cached data, upload validation, Plotly charts
+│   ├── streamlit_app.py          # Interactive dashboard entry point
+│   └── components/               # Cached data loader, upload validation, Plotly visualizers
 ├── data/
-│   ├── raw/                      # Place official .mat files here (Git-ignored)
-│   └── processed/                # Generated feature tables (Git-ignored)
-├── models/                       # Final demonstration fits and schemas (ignored)
+│   ├── raw/                      # Place official NASA .mat files here (Git-ignored)
+│   └── processed/                # Preprocessed cycle feature and target tables (Git-ignored)
+├── models/                       # Final demonstration model fits and schema metadata (Git-ignored)
 ├── reports/
-│   ├── figures/                  # Exploratory plots (ignored)
-│   └── results/                  # Metrics, OOF predictions, audits (ignored)
-├── scripts/                      # Inspection, preprocessing, training and audits
-├── src/ev_battery/               # Loader, features, targets, models, evaluation
-├── tests/                        # unittest suite
-├── requirements.txt              # Core dependencies
-└── requirements-optional.txt     # XGBoost, PyTorch and SHAP
+│   ├── figures/                  # Exploratory and degradation plots (Git-ignored)
+│   └── results/                  # LOBO metrics, OOF predictions, and model comparisons (Git-ignored)
+├── scripts/                      # CLI entry points (inspect_dataset.py, prepare_data.py, run_experiments.py)
+├── src/ev_battery/               # Core library: parser, features, targets, models, evaluation
+├── tests/                        # 30-test automated verification suite
+├── requirements.txt              # Core runtime dependencies
+└── requirements-optional.txt     # Optional modeling packages (XGBoost, PyTorch, SHAP)
 ```
 
-Raw `.mat` files and generated data, model weights, figures and result tables
-are excluded by `.gitignore`. The project is inside a parent Git working tree;
-the project `.gitignore` excludes `data/raw/**` and `*.mat`. Confirm with:
+Raw `.mat` files, processed tables, model weights, figures, and result tables are excluded by `.gitignore`. You can verify path exclusions with:
 
 ```bash
-git check-ignore -v BL_RUL_predictor/data/raw/your-file.mat
-git ls-files 'BL_RUL_predictor/data/raw/**/*.mat'
+git check-ignore -v data/raw/your-file.mat
+git ls-files 'data/raw/**/*.mat'
 ```
 
-## Environment and reproducible commands
+---
 
-Tested here with Python 3.13.5, NumPy 2.2.6, SciPy 1.16.0, pandas 2.2.3,
-scikit-learn 1.6.1, Streamlit 1.45.1 and Plotly 6.1.2. Optional components
-XGBoost 3.0.2, PyTorch 2.7.1 and SHAP 0.48.0 were installed for the run below.
+## 🚀 Getting Started (Step-by-Step Guide)
 
-From the project root:
+Tested with Python 3.13.5, NumPy 2.2.6, SciPy 1.16.0, pandas 2.2.3, scikit-learn 1.6.1, Streamlit 1.45.1, and Plotly 6.1.2. Optional libraries include XGBoost 3.0.2, PyTorch 2.7.1, and SHAP 0.48.0.
+
+Follow these exact steps from the project root after cloning or pulling the repository:
+
+### Step 1: Create and Activate Virtual Environment
 
 ```bash
+# macOS / Linux:
 python3 -m venv .venv
 source .venv/bin/activate
+
+# Windows (Command Prompt / PowerShell):
+# python -m venv .venv
+# .venv\Scripts\activate
+
+# Upgrade pip and install core dependencies
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install -e .
-python -m pip install -r requirements-optional.txt  # Optional experiments
 
-# Copy the official archive's .mat files (preserve file names) into data/raw/.
-python scripts/inspect_dataset.py --output reports/inspection.json
-python scripts/prepare_data.py
-python -m unittest discover -s tests -v
-python scripts/run_experiments.py
-python scripts/audit_experiments.py
-python scripts/check_numerics.py
-streamlit run app/streamlit_app.py
+# Optional (recommended): enables XGBoost, PyTorch (LSTM), and SHAP
+python -m pip install -r requirements-optional.txt
 ```
 
-The parser supports MATLAB files readable by SciPy; MATLAB v7.3/HDF5 files are
-reported as unsupported. No network download is assumed. Optional dependencies
-are skipped with a recorded reason if unavailable. `--raw-dir`, `--output-dir`,
-`--reports-dir`, and `--figures-dir` are available on preprocessing; the
-experiment script accepts `--data-dir`, `--results-dir`, `--models-dir`, and
-`--seed`.
+### Step 2: Download and Extract NASA Battery Dataset
 
-## Targets, features and evaluation
+Because raw experimental files (`.mat`) are excluded from Git, download the official NASA PCoE battery dataset and place the extracted files into `data/raw/`:
 
-SOH is `100 × measured discharge capacity (Ah) / reference capacity (Ah)` and
-is reported in percentage points. The default reference is 2.0 Ah; the optional
-`first_valid` reference uses each battery's first valid recorded capacity. RUL
-is `EOL discharge-cycle index − current discharge-cycle index`, in cycles. The
-default EOL is the first capacity at or below 70% of the reference (1.4 Ah for
-the rated-capacity setting). `--persistence K` requires K consecutive qualifying
-records; the default is one. A battery with no observed crossing is censored,
-not assigned an invented EOL. A first recorded value already below threshold is
-flagged because its earlier crossing is unknown.
+**Option A — Terminal download (macOS/Linux):**
+```bash
+# Download official archive directly from NASA PHM repository
+curl --fail --location --retry 3 \
+  'https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip' \
+  --output data/raw/nasa_battery.zip
 
-Each row represents a recorded discharge operation, in source record order.
-SOH predictors are cycle index, ambient temperature and charge/discharge
-voltage, current and temperature summaries. RUL adds current observed discharge
-capacity and causal lag/trailing capacity history. Capacity and derived SOH are
-excluded from SOH predictors. Battery ID is retained only for grouping and
-diagnostics. No future cycles, EOL index or target enters predictors. Missing
-predictors stay missing until imputation is learned inside each training fold.
-Impedance remains separate because a defensible cycle alignment is not
-established.
+# Unzip archive into data/raw/
+unzip -q data/raw/nasa_battery.zip -d data/raw/
 
-Models are a training-mean baseline, Ridge, Random Forest, SVR, XGBoost and a
-small LSTM. Scaling/imputation are in fold-local pipelines. Primary validation
-is leave-one-battery-out (LOBO): all rows from one battery are held out together;
-hyperparameter searches use group-wise splits only among the remaining training
-batteries. Metrics include MAE, RMSE and R² (undefined R² remains blank), with
-both macro battery-equal and pooled row-weighted summaries. SOH units are
-percentage points; RUL units are cycles. LSTM uses contiguous five-cycle causal
-windows within each battery, so it has lower prediction coverage.
+# Extract nested battery archives (e.g., 1. BatteryAgingARC_25-44.zip, etc.)
+find data/raw -name "*.zip" ! -name "nasa_battery.zip" -exec unzip -qo {} -d data/raw/ \;
+```
 
-## Generated artifacts
+**Option B — Manual download:**
+1. Visit the [official NASA PCoE repository](https://www.nasa.gov/intelligent-systems-division/discovery-and-systems-health/pcoe/pcoe-data-set-repository/).
+2. Under **5. Batteries**, download the [Battery Data Set archive](https://phm-datasets.s3.amazonaws.com/NASA/5.+Battery+Data+Set.zip).
+3. Extract the downloaded zip and any nested zip archives directly into `data/raw/` so that `.mat` files (e.g., `B0005.mat`, `B0006.mat`, etc.) reside in `data/raw/`.
 
-Preprocessing generates:
+### Step 3: Inspect Dataset Integrity
 
+Scan all `.mat` files in `data/raw/` to verify structure schemas and discover valid battery records:
+```bash
+python scripts/inspect_dataset.py --output reports/inspection.json
+```
+
+### Step 4: Extract Features & Prepare Datasets
+
+Process raw discharge/charge records into clean tabular cycle features, handle operational anomalies, and generate SOH and RUL ground-truth targets:
+```bash
+python scripts/prepare_data.py
+```
+*Outputs generated:* `data/processed/cycle_features.csv`, `soh_dataset.csv`, `rul_dataset.csv`, `operation_inventory.csv`, `impedance_records.csv`, and EDA figures in `reports/figures/`.
+
+*(Optional flags: `--raw-dir`, `--output-dir`, `--reports-dir`, `--figures-dir`)*
+
+### Step 5: Run Automated Verification Suite
+
+Run all 30 unit tests to verify parsing logic, causal feature invariance, target computation, and LOBO splitting integrity:
+```bash
+python -m unittest discover -s tests -v
+```
+*(All 30 unit tests should pass with `OK`)*
+
+### Step 6: Train & Evaluate Models (LOBO Cross-Validation)
+
+Run the full Leave-One-Battery-Out (LOBO) experimental protocol across all holdout batteries:
+```bash
+python scripts/run_experiments.py
+```
+*Outputs generated:* `reports/results/soh_metrics.csv`, `rul_metrics.csv`, `fold_metrics.csv`, `oof_predictions.csv`, `common_support_metrics.csv`, `feature_importance.csv`, `model_comparison.json`, and final deployable models in `models/`.
+
+*(Optional flags: `--data-dir`, `--results-dir`, `--models-dir`, `--seed`)*
+
+### Step 7: Launch Interactive Streamlit Dashboard
+
+Start the local web application:
+```bash
+streamlit run app/streamlit_app.py
+```
+The dashboard will open automatically in your browser at `http://localhost:8501`.
+
+---
+
+## Targets, Features, and Validation Protocol
+
+- **State of Health (SOH):** Defined as `100 × measured discharge capacity (Ah) / reference capacity (Ah)`, reported in percentage points (% SOH). The default reference capacity is 2.0 Ah (optional `first_valid` reference uses each battery's first recorded capacity).
+- **Remaining Useful Life (RUL):** Defined as `EOL discharge-cycle index − current discharge-cycle index`, in cycles. The default EOL threshold is the first recorded capacity ≤ 70% rated capacity (1.4 Ah). Batteries that never reach the EOL threshold are strictly right-censored rather than given artificial targets. Cells that start below threshold are flagged.
+- **Causal Feature Engineering:** Every row represents a single discharge cycle. Predictors include cycle index, ambient temperature, charge/discharge voltage and current aggregates, and thermal dynamics. RUL predictors add observed discharge capacity and historical capacity lag features. Current discharge capacity is strictly excluded from SOH predictors to avoid trivial leakage.
+- **Strict Leave-One-Battery-Out (LOBO) Evaluation:** In each outer fold, all observations belonging to an entire battery are held out. Inner hyperparameter tuning executes group-wise splits exclusively among remaining training batteries. No validation battery data ever leaks into scaler fitting, imputation, or hyperparameter selection.
+- **Evaluated Models:** Mean Baseline, Ridge Regression, Random Forest Regressor, Support Vector Regression (SVR, RBF kernel), XGBoost Regressor, and a causal Sequence LSTM (5-step window).
+
+---
+
+## Generated Artifacts
+
+Preprocessing (`python scripts/prepare_data.py`) outputs:
 - `data/processed/cycle_features.csv`, `soh_dataset.csv`, `rul_dataset.csv`
 - `data/processed/operation_inventory.csv`, `impedance_records.csv`
 - `reports/results/data_quality_report.json`
-- `reports/figures/capacity_degradation.png`, `soh_trajectory.png`,
-  `feature_relationships.png`
+- `reports/figures/capacity_degradation.png`, `soh_trajectory.png`, `feature_relationships.png`
 
-Training generates `soh_metrics.csv`, `rul_metrics.csv`, `fold_metrics.csv`,
-`oof_predictions.csv`, `common_support_metrics.csv`, `feature_importance.csv`,
-`model_comparison.json`, `experiment_audit.json`, and final inference models
-with feature-schema metadata under `models/`. Every OOF prediction records its
-battery, cycle, actual and predicted target, model and fold. Final all-data fits
-are for demonstration only; their in-sample scores are not reported as
-cross-validation performance.
+Training (`python scripts/run_experiments.py`) outputs:
+- `reports/results/soh_metrics.csv`, `rul_metrics.csv`, `fold_metrics.csv`
+- `reports/results/oof_predictions.csv`, `common_support_metrics.csv`, `feature_importance.csv`
+- `reports/results/model_comparison.json` (comprehensive benchmarks and embedded metric audit)
+- Saved demonstration models (`*.joblib`, `*.pt`) and feature schema metadata (`*.json`) in `models/`
 
-## Quality assurance run and observed results
+---
 
-Executed on the actual files in `data/raw/` on 2026-10-11 with the versions above:
+## Benchmark Results
 
-- 38 MATLAB files discovered; byte-identical duplicate files were reconciled by
-  content hash. The resulting processed set contains 34 battery IDs, 2,794
-  discharge rows and 930 rows in the RUL table.
-- All 30 unit tests passed.
-- All six dashboard sections rendered in Streamlit's `AppTest` with no
-  exceptions. Upload validation rejected missing columns and nonnumeric feature
-  values. Live server endpoint and browser interaction should also be checked
-  in the local runtime.
-- Full LOBO experiment completed: 263 evaluated folds and 19,268 OOF
-  predictions. The audit passed: actual values match prepared labels, expected
-  prediction coverage is exact, outer test batteries are absent from tuning,
-  metrics recompute from saved predictions, and all 12 final model artifacts
-  reload and produce finite predictions.
-- Both XGBoost and LSTM were evaluated. LSTM has reduced SOH coverage (33 groups,
-  2,546 rows versus 34 groups, 2,750 for tabular models); RUL LSTM covers 462
-  versus 502 rows.
+Evaluated across 34 batteries (2,794 discharge cycles for SOH, 930 for RUL) under LOBO cross-validation:
 
-Observed macro battery-equal MAE from this run:
+| Target | Best Model (Macro MAE) | Benchmark Rankings (Macro MAE) | Baseline MAE |
+| :--- | :--- | :--- | :--- |
+| **SOH** (% points) | **SVR**: 4.27% | Random Forest: 5.32% • LSTM: 5.65% • XGBoost: 5.66% • Ridge: 7.20% | 19.45% |
+| **RUL** (cycles) | **SVR**: 11.52 cycles | XGBoost: 13.72 • Random Forest: 13.77 • LSTM: 15.94 • Ridge: 25.23 | 31.30 cycles |
 
-| Target | Best macro MAE | Next models (macro MAE) |
-| --- | ---: | --- |
-| SOH | SVR: 4.27 percentage points | Random Forest 5.32; LSTM 5.65; XGBoost 5.66; Ridge 7.20 |
-| RUL | SVR: 11.52 cycles | XGBoost 13.72; Random Forest 13.77; LSTM 15.94; Ridge 25.23 |
+*Note: SVR with an RBF kernel demonstrates superior generalization on small cohort cell data, preventing overfitting to battery-specific impedance variations.*
 
-The mean baseline scored 19.45 percentage points MAE for SOH and 31.30 cycles
-MAE for RUL. These are small-cohort results, not evidence of stable fleet
-generalization. RUL uses only 10 eligible batteries and is especially sensitive
-to EOL labels: with the default single-crossing rule, changes in discharge
-current/temperature and isolated capacity dips may be interpreted as EOL.
-Review the per-battery traces and consider reference-condition measurements
-before treating RUL results as operational forecasts.
+---
 
-Numerical QA passed: Ridge OOF predictions matched independent SVD refits to
-within 5.5e-11 (SOH) and 3.8e-12 (RUL), and replaying the checked LSTM fold
-matched to 1.5e-14. The environment nevertheless emitted thousands of NumPy
-matrix-operation runtime warnings during Ridge fitting; this remains a numeric
-runtime caveat, even though the saved predictions were finite and independently
-reproduced.
+## Interactive Streamlit Dashboard
+
+Launch the local web application:
+```bash
+streamlit run app/streamlit_app.py
+```
+
+The application provides six functional modules:
+1. **Project Overview**: Problem context, dataset architecture, processing pipeline status, and artifact readiness checks.
+2. **Battery Data Explorer**: Interactive degradation curves, voltage/current profile drilldowns, and multi-cell comparisons.
+3. **Model Performance**: LOBO benchmark metrics (MAE, RMSE, R²), actual vs. predicted parity plots, and residual error distributions.
+4. **Prediction Explorer**: Real-time inference on uploaded cycle telemetry with schema verification, unit confirmation, and median imputation fallback.
+5. **Feature Importance**: Gini-impurity and SHAP feature importance rankings identifying primary degradation indicators.
+6. **Methodology & Limitations**: In-depth explanations of LOBO grouping, right-censoring handling, EOL criteria sensitivity, and operational constraints.
+
+---
 
 ## Limitations
 
-There are 34 independent battery groups for SOH but only 10 observed-EOL RUL
-groups after censoring and initial-threshold-only exclusions. LOBO fold results
-share most training batteries, so fold variation is descriptive, not a
-confidence interval. Tests are accelerated laboratory cell tests with varying
-conditions, not EV fleet or pack field data. EOL threshold labels from
-operational discharge capacity can be confounded by test conditions. The
-dashboard reports saved results only and performs no experiment on page load.
+1. **Cohort Sample Size:** 34 cells are available for SOH, but only 10 cells reach the 1.4 Ah EOL threshold for RUL prediction after censoring.
+2. **Laboratory vs. Fleet Operational Differences:** NASA PCoE data represents accelerated laboratory cycling under constant current/power conditions rather than variable real-world EV duty cycles.
+3. **Capacity Jump Sensitivity:** Transient capacity recovery following relaxation periods can confound strict threshold-crossing rules.

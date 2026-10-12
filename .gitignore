@@ -15,6 +15,7 @@ dist/
 .coverage*
 htmlcov/
 .ipynb_checkpoints/
+pyrefly.toml
 
 # Local machine/editor files and secrets
 .DS_Store
@@ -22,6 +23,11 @@ htmlcov/
 .env.*
 .idea/
 .vscode/
+
+# Archived support and external report generation workspace
+ML_Proj_Extra/
+*.docx
+*.pdf
 
 # Original NASA data and downloaded archives: do not commit source datasets
 *.mat
